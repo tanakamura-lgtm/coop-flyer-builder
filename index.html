@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>コープさっぽろチラシ作成アプリ | Coop Flyer Builder</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- html2canvas for high-res PNG export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- jsPDF for direct high-res A4 PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- App Top Navigation Bar -->
+  <header class="app-topbar">
+    <div class="brand-section">
+      <div class="brand-badge">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
+        </svg>
+        COOP
+      </div>
+      <h1 class="brand-title">
+        コープさっぽろ チラシ作成アプリ
+        <span>号外 編集ツール</span>
+      </h1>
+    </div>
+
+    <div class="top-actions">
+      <button id="btn-load-sample" class="btn btn-secondary" title="添付チラシのサンプルを読み込み">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        初期サンプル
+      </button>
+
+      <button id="btn-save-json" class="btn btn-secondary" title="チラシデータをJSON形式で保存">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        データ保存
+      </button>
+
+      <label class="btn btn-secondary" style="margin-bottom:0;" title="保存したJSONファイルを読み込み">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        データ読込
+        <input type="file" id="input-load-json" accept=".json" style="display:none;">
+      </label>
+
+      <button id="btn-export-pdf" class="btn btn-primary" style="background: linear-gradient(135deg, #e4007f 0%, #b80065 100%); border-color: #b80065; font-weight: bold; box-shadow: 0 2px 6px rgba(228, 0, 127, 0.4);" title="ワンクリックでA4サイズのPDFとして直接ダウンロード保存">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+        PDF保存
+      </button>
+
+      <button id="btn-export-png" class="btn btn-success" title="高解像度PNG画像としてダウンロード">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        画像保存 (PNG)
+      </button>
+
+      <button id="btn-print" class="btn btn-secondary" title="ブラウザの印刷ダイアログを開く（紙への印刷や詳細印刷設定）">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 6 2 18 2 18 9"/>
+          <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
+          <rect x="6" y="14" width="12" height="8"/>
+        </svg>
+        A4印刷 (Ctrl+P)
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Work Area -->
+  <main class="app-main">
+
+    <!-- Left: Editor Control Panel -->
+    <aside class="editor-sidebar">
+      
+      <!-- Tab Navigation -->
+      <div class="editor-tabs">
+        <button class="editor-tab-btn active" data-tab="tab-items">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/>
+          </svg>
+          商品編集
+        </button>
+        <button class="editor-tab-btn" data-tab="tab-header">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          セール名・期間
+        </button>
+        <button class="editor-tab-btn" data-tab="tab-stores">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          対象4店舗
+        </button>
+      </div>
+
+      <div class="editor-content">
+
+        <!-- 🌟 Grid Layout Selector: 8コマ / 10コマ / 12コマ -->
+        <div class="grid-layout-selector-bar">
+          <label>コマ割りテンプレート選択:</label>
+          <div class="grid-options-group">
+            <button type="button" class="grid-opt-btn active" data-grid="8">8コマ (2×4)</button>
+            <button type="button" class="grid-opt-btn" data-grid="10">10コマ (2×5)</button>
+            <button type="button" class="grid-opt-btn" data-grid="12">12コマ (3×4)</button>
+          </div>
+        </div>
+
+        <!-- TAB 1: Items Editor -->
+        <div id="tab-items" class="tab-panel active">
+          
+          <!-- Item Quick Selectors -->
+          <div class="form-group" style="margin-bottom: 8px;">
+            <label class="form-label" id="item-selector-heading">編集するコマを選択</label>
+            <div class="item-selector-grid" id="item-selector-container">
+              <!-- Dynamically generated buttons (8, 10, or 12) -->
+            </div>
+          </div>
+
+          <!-- Active Item Edit Card -->
+          <div class="card-section" id="active-item-form-card">
+            <div class="card-header">
+              <span id="active-item-title-label">コマ 1 の編集</span>
+              <span class="badge-num" id="active-item-sub-label">選択中</span>
+            </div>
+
+            <div class="card-body">
+
+              <!-- Product Name -->
+              <div class="form-group">
+                <label class="form-label" for="input-product-name">
+                  商品名（7文字以上は自動で2段表示） <span class="req">必須</span>
+                </label>
+                <div style="display: flex; gap: 6px;">
+                  <input type="text" id="input-product-name" class="form-input" placeholder="例: 玉ねぎ / シャウエッセン / ななつぼしブレンド">
+                  <button id="btn-quick-web-search" class="btn btn-primary" style="padding:0 10px; font-size:11px; white-space:nowrap;" title="入力した商品名でWEBから画像を自動検索">
+                    🔍 WEB画像検索
+                  </button>
+                </div>
+              </div>
+
+              <!-- Maker / Origin & Volume -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="input-origin-maker">産地・メーカー名（左上）</label>
+                  <input type="text" id="input-origin-maker" class="form-input" placeholder="例: 北海道産 / 日本ハム">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="input-volume">内容量・規格（7文字以上は2段）</label>
+                  <input type="text" id="input-volume" class="form-input" placeholder="例: 1.5kg・1ネット / 117g×2">
+                </div>
+              </div>
+
+              <!-- Price: Hontai & Tax 8% (Mega Price) -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="input-price-hontai">
+                    本体価格 (円) <span class="req">必須</span>
+                  </label>
+                  <input type="number" id="input-price-hontai" class="form-input" placeholder="例: 379" min="0" step="1">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="input-price-tax">
+                    税込価格 (8%自動反映)
+                  </label>
+                  <input type="number" id="input-price-tax" class="form-input" placeholder="自動計算">
+                  <span class="calc-hint" id="tax-calc-hint">※消費税8%自動反映中</span>
+                </div>
+              </div>
+
+              <!-- Unit Label & Badge (Right side of top bar) -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="input-price-unit">単位表示 (各/1玉など)</label>
+                  <input type="text" id="input-price-unit" class="form-input" placeholder="例: 各 / 1玉 / 1本 / 1パック">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="input-badge">バッジ・帯（右上）</label>
+                  <select id="input-badge" class="form-select">
+                    <option value="">なし</option>
+                    <option value="数量限定">数量限定</option>
+                    <option value="お1人様2点限り">お1人様2点限り</option>
+                    <option value="お1人様1点限り">お1人様1点限り</option>
+                    <option value="おすすめポイント+150pt">おすすめポイント+150pt</option>
+                    <option value="広告の品">広告の品</option>
+                    <option value="今週のイチオシ">今週のイチオシ</option>
+                    <option value="原料原産地ロシア">原料原産地ロシア</option>
+                    <option value="生協基準クリア">生協基準クリア</option>
+                    <option value="カスタム">自由入力...</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group" id="group-custom-badge" style="display:none;">
+                <label class="form-label" for="input-custom-badge">自由入力バッジ文字</label>
+                <input type="text" id="input-custom-badge" class="form-input" placeholder="例: 米コーナーにて / 超特大">
+              </div>
+
+              <!-- Catch Copy / Notes (Right under Badge) -->
+              <div class="form-group">
+                <label class="form-label" for="input-catchcopy">キャッチコピー・注意書き（バッジ下段・10文字超折り返し）</label>
+                <input type="text" id="input-catchcopy" class="form-input" placeholder="例: パリッ!!としたおいしさ / 入荷状況により他産地に変更になる場合があります">
+              </div>
+
+              <!-- Card Border Color Variant & Image Fit -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="input-card-border">コマの枠線カラー</label>
+                  <select id="input-card-border" class="form-select">
+                    <option value="border-pink">ピンク（標準・精肉・惣菜）</option>
+                    <option value="border-cyan">シアン（鮮魚・水産）</option>
+                    <option value="border-gold">ゴールド（特売・目玉商品）</option>
+                    <option value="border-green">グリーン（青果・野菜・果物）</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="input-img-fit">画像の余白調整</label>
+                  <select id="input-img-fit" class="form-select">
+                    <option value="fit-contain">全体を表示（標準）</option>
+                    <option value="fit-cover">枠いっぱいに埋める（余白ゼロ）</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Image Controls -->
+              <div class="form-group">
+                <label class="form-label">商品画像の設定</label>
+                <div class="image-input-box">
+                  <div class="image-preview-thumbnail" id="editor-image-preview-box">
+                    <img id="editor-image-preview" src="" alt="画像未設定">
+                  </div>
+                  
+                  <div class="image-btn-row">
+                    <button type="button" id="btn-open-web-search" class="btn btn-primary">
+                      🔍 WEB画像検索
+                    </button>
+                    <button type="button" id="btn-open-presets" class="btn btn-secondary">
+                      🖼 写真ライブラリ
+                    </button>
+                    <label class="btn btn-secondary" style="margin-bottom:0;">
+                      📁 ファイル選択
+                      <input type="file" id="input-local-image" accept="image/*" style="display:none;">
+                    </label>
+                  </div>
+
+                  <!-- Image URL direct input + Clipboard Paste -->
+                  <div style="display:flex; gap:6px; margin-top:4px;">
+                    <input type="url" id="input-image-url" class="form-input" placeholder="画像URL直接貼り付け">
+                    <button id="btn-apply-image-url" class="btn btn-secondary" style="padding:0 8px; font-size:11px;">適用</button>
+                    <button id="btn-paste-clipboard" class="btn btn-secondary" style="padding:0 8px; font-size:11px;" title="クリップボードからURLを貼り付け">📋 貼付</button>
+                  </div>
+
+                  <!-- Image Zoom & Position Adjustments -->
+                  <div style="background:#11131b; padding:6px 8px; border-radius:6px; margin-top:4px;">
+                    <div style="font-size:11px; font-weight:bold; margin-bottom:4px; color:#cbd5e1;">画像サイズ・表示位置の微調整</div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label class="form-label" style="font-size:10px;">拡大率 (Zoom: 50%〜250%)</label>
+                        <input type="range" id="input-img-zoom" min="50" max="250" value="100" style="width:100%;">
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" style="font-size:10px;">上下位置 (Y)</label>
+                        <input type="range" id="input-img-pos-y" min="-60" max="60" value="0" style="width:100%;">
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        <!-- TAB 2: Sale Title & Date Range Editor -->
+        <div id="tab-header" class="tab-panel" style="display:none;">
+          
+          <!-- 1. Sale Title Edit -->
+          <div class="card-section">
+            <div class="card-header">
+              <span>セールタイトル設定（編集可能）</span>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label" for="input-sale-title">
+                  セールタイトル文字（「今週のお買い得！！」は上段・下段に自動分割） <span class="req">必須</span>
+                </label>
+                <input type="text" id="input-sale-title" class="form-input" value="今週のお買い得！！" placeholder="例: 今週のお買い得！！ / 号外！ / 週末大特価セール！">
+              </div>
+
+              <!-- Central Title Background Theme Selector -->
+              <div class="form-group">
+                <label class="form-label" for="select-title-bg-theme">中央タイトルの背景カラーテーマ</label>
+                <select id="select-title-bg-theme" class="form-select">
+                  <option value="theme-gold">ゴールド・イエロー（定番・華やか特売）</option>
+                  <option value="theme-red">レッド・インパクト（目玉・大特売・号外）</option>
+                  <option value="theme-pink">ピンク・ポップ（親しみ・生協・感謝祭）</option>
+                  <option value="theme-blue">ブルー・爽快（鮮度・信頼・生活応援）</option>
+                  <option value="theme-white">ホワイト・クリーン（上品・シンプル）</option>
+                </select>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- 2. Date Range Edit (●月●日～●月●日) -->
+          <div class="card-section" style="margin-top: 10px;">
+            <div class="card-header">
+              <span>売出し期間（●月●日～●月●日）</span>
+            </div>
+            <div class="card-body">
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="input-start-date">売出し開始日</label>
+                  <input type="date" id="input-start-date" class="form-input" value="2026-09-06">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="input-end-date">売出し終了日</label>
+                  <input type="date" id="input-end-date" class="form-input" value="2026-09-08">
+                </div>
+              </div>
+
+              <!-- Direct Text Edit for Date Range -->
+              <div class="form-group">
+                <label class="form-label" for="input-date-range-text">
+                  チラシ上の期間表示テキスト
+                </label>
+                <input type="text" id="input-date-range-text" class="form-input" value="9月6日(日)～9月8日(火)">
+                <span style="font-size: 10px; color: #94a3b8;">
+                  ※カレンダー選択時に自動生成されますが、自由な文言（例:「9月6日(日)～8日(火)」「8月30日(日)限り」など）に直接編集も可能です。
+                </span>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- 3. Right Box Settings (Editable) -->
+          <div class="card-section" style="margin-top: 10px;" id="section-right-box-editor">
+            <div class="card-header">
+              <span>タイトル右側枠の設定（編集可能）</span>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label" for="input-rightbox-type">表示タイプ</label>
+                <select id="input-rightbox-type" class="form-select">
+                  <option value="banner">画像バナーを表示</option>
+                  <option value="custom">カスタム告知テキスト（チラシPOP風）</option>
+                </select>
+              </div>
+
+              <!-- Type: Banner -->
+              <div id="group-rightbox-banner">
+                <div class="form-group">
+                  <label class="form-label">バナー画像</label>
+                  <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+                    <button type="button" id="btn-preset-rightbox-10x" class="btn btn-secondary" style="font-size:11px;">
+                      ⚡ ポイント10倍バナー
+                    </button>
+                    <label class="btn btn-secondary" style="margin-bottom:0; font-size:11px; cursor:pointer;">
+                      📁 画像を選択
+                      <input type="file" id="input-rightbox-local-image" accept="image/*" style="display:none;">
+                    </label>
+                  </div>
+                  <input type="text" id="input-rightbox-image-url" class="form-input" placeholder="画像URLまたはファイルパス">
+                </div>
+              </div>
+
+              <!-- Type: Custom POP Text -->
+              <div id="group-rightbox-custom" style="display: none;">
+                <div class="form-group">
+                  <label class="form-label" for="input-rightbox-tag">上部バッジ（帯文字）</label>
+                  <input type="text" id="input-rightbox-tag" class="form-input" placeholder="例: 毎週土日 / 生協限定 / 特別企画" value="毎週土日">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="input-rightbox-main">メイン見出し（特大文字）</label>
+                  <input type="text" id="input-rightbox-main" class="form-input" placeholder="例: ポイント10倍！ / タイムセール" value="ポイント10倍！">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="input-rightbox-sub">下部説明文・注釈</label>
+                  <input type="text" id="input-rightbox-sub" class="form-input" placeholder="例: ※一部対象外商品がございます" value="※一部対象外商品がございます">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="input-rightbox-theme">カラーテーマ</label>
+                  <select id="input-rightbox-theme" class="form-select">
+                    <option value="gold">ゴールド・イエロー（定番・高還元）</option>
+                    <option value="red">レッド・インパクト（特売・目玉）</option>
+                    <option value="pink">ピンク・ポップ（親しみ・生協）</option>
+                    <option value="blue">ブルー・爽やか（鮮度・信頼）</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- TAB 3: 4 Stores Information Editor -->
+        <div id="tab-stores" class="tab-panel" style="display:none;">
+          <div class="card-section">
+            <div class="card-header">
+              <span>ご指定の対象4店舗情報</span>
+            </div>
+            <div class="card-body">
+              <p style="font-size:11px; color:var(--text-sub); line-height:1.4;">
+                ※ユーザー様ご指定により、「パセオ堺町店・えりも店・東町店・様似店」の4店舗のみを掲載しています。営業時間や電話番号の変更が可能です。
+              </p>
+
+              <!-- Store 1: パセオ堺町店 -->
+              <div style="background:#181a24; padding:7px; border-radius:6px; border:1px solid #2d3142;">
+                <div style="font-weight:bold; font-size:12px; color:#60a5fa; margin-bottom:3px;">1. パセオ堺町店</div>
+                <div class="form-row">
+                  <input type="text" id="store-1-hours" class="form-input" value="通常あさ9時からよる9時まで営業">
+                  <input type="text" id="store-1-tel" class="form-input" value="☎0146-22-1511">
+                </div>
+              </div>
+
+              <!-- Store 2: えりも店 -->
+              <div style="background:#181a24; padding:7px; border-radius:6px; border:1px solid #2d3142;">
+                <div style="font-weight:bold; font-size:12px; color:#60a5fa; margin-bottom:3px;">2. えりも店</div>
+                <div class="form-row">
+                  <input type="text" id="store-2-hours" class="form-input" value="通常あさ9時からよる8時まで営業">
+                  <input type="text" id="store-2-tel" class="form-input" value="☎01466-2-2342">
+                </div>
+              </div>
+
+              <!-- Store 3: 東町店 -->
+              <div style="background:#181a24; padding:7px; border-radius:6px; border:1px solid #2d3142;">
+                <div style="font-weight:bold; font-size:12px; color:#60a5fa; margin-bottom:3px;">3. 東町店</div>
+                <div class="form-row">
+                  <input type="text" id="store-3-hours" class="form-input" value="通常あさ10時からよる7時まで営業">
+                  <input type="text" id="store-3-tel" class="form-input" value="☎0146-22-0001">
+                </div>
+              </div>
+
+              <!-- Store 4: 様似店 -->
+              <div style="background:#181a24; padding:7px; border-radius:6px; border:1px solid #2d3142;">
+                <div style="font-weight:bold; font-size:12px; color:#60a5fa; margin-bottom:3px;">4. 様似店</div>
+                <div class="form-row">
+                  <input type="text" id="store-4-hours" class="form-input" value="通常あさ9時からよる8時まで営業">
+                  <input type="text" id="store-4-tel" class="form-input" value="☎0146-36-4551">
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- Right: Flyer Live Preview Pane -->
+    <section class="preview-pane">
+      
+      <!-- Preview Zoom Toolbar -->
+      <div class="preview-toolbar">
+        <span class="preview-zoom-label">表示倍率:</span>
+        <button id="btn-zoom-out" class="zoom-btn" title="縮小">−</button>
+        <span id="zoom-value-label" style="font-size:11px; font-weight:bold; min-width:38px; text-align:center;">85%</span>
+        <button id="btn-zoom-in" class="zoom-btn" title="拡大">＋</button>
+        <button id="btn-zoom-reset" class="btn btn-secondary" style="padding:3px 7px; font-size:11px;">100%</button>
+        <button id="btn-zoom-fit" class="btn btn-secondary" style="padding:3px 7px; font-size:11px;">全体表示</button>
+      </div>
+
+      <!-- Flyer Sheet Container -->
+      <div class="flyer-sheet-container" id="flyer-container">
+        
+        <!-- The Actual Flyer (A4 Proportion) -->
+        <article id="flyer-sheet">
+
+          <!-- 1. Header Area: 1.5x Expanded Title Box + 10x Points on Right (No Top Strip) -->
+          <header class="flyer-header">
+            <div class="header-main-row">
+              
+              <!-- Left: Coop Sapporo Logo + Date Range (Expanded width for 2x fonts) -->
+              <div class="header-left-col">
+                <div class="header-coop-logo-box">
+                  <img src="assets/coop_logo.png" alt="コープさっぽろ つなぐ" class="header-coop-logo-img">
+                </div>
+
+                <div class="header-date-badge-box">
+                  <div class="date-badge-title">●広告商品売出し期間</div>
+                  <div class="date-range-display-container">
+                    <div class="date-range-text" id="flyer-date-range-val">
+                      9月6日(日)～9月8日(火)
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Center: 🌟 Auto-Fitting Sale Title Area -->
+              <div class="header-center-title-area" id="header-center-title-area">
+                <h2 class="flyer-sale-title-text multiline-title" id="flyer-sale-title-val">今週の<br>お買い得！！</h2>
+              </div>
+
+              <!-- Right: Editable Right Box (Banner or Custom POP Notice) -->
+              <div class="header-right-box" id="flyer-right-box" title="クリックして右側枠を編集">
+                <!-- Rendered dynamically via app.js -->
+              </div>
+
+            </div>
+          </header>
+
+          <!-- 2. Product Grid: Dynamically 8, 10, or 12 items -->
+          <div class="flyer-grid-8" id="flyer-items-grid">
+            <!-- Product cards will be dynamically rendered here -->
+          </div>
+
+          <!-- 3. Footer: Specified 4 Stores + Official Notice -->
+          <footer class="flyer-footer">
+            <div class="stores-container">
+              <div class="stores-header-bar">
+                <span class="stores-region-title">日高・浦河地区 対象店舗</span>
+                <span class="stores-notice-sub">※電話番号をよくご確認の上、お間違いのないようご注意ください。</span>
+              </div>
+              <div class="stores-4-grid">
+                <!-- Store 1 -->
+                <div class="store-card">
+                  <div class="store-hours" id="flyer-store-1-hours">通常あさ9時からよる9時まで営業</div>
+                  <div class="store-name">パセオ堺町店</div>
+                  <div class="store-tel" id="flyer-store-1-tel">☎0146-22-1511</div>
+                </div>
+                <!-- Store 2 -->
+                <div class="store-card">
+                  <div class="store-hours" id="flyer-store-2-hours">通常あさ9時からよる8時まで営業</div>
+                  <div class="store-name">えりも店</div>
+                  <div class="store-tel" id="flyer-store-2-tel">☎01466-2-2342</div>
+                </div>
+                <!-- Store 3 -->
+                <div class="store-card">
+                  <div class="store-hours" id="flyer-store-3-hours">通常あさ10時からよる7時まで営業</div>
+                  <div class="store-name">東町店</div>
+                  <div class="store-tel" id="flyer-store-3-tel">☎0146-22-0001</div>
+                </div>
+                <!-- Store 4 -->
+                <div class="store-card">
+                  <div class="store-hours" id="flyer-store-4-hours">通常あさ9時からよる8時まで営業</div>
+                  <div class="store-name">様似店</div>
+                  <div class="store-tel" id="flyer-store-4-tel">☎0146-36-4551</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Official Disclaimer & UD Font Notice -->
+            <div class="footer-notice-bar">
+              <span class="ud-font-logo">UD FONT</span>
+              <div class="footer-disclaimer-text">
+                ●コープさっぽろは一部を除き、本体価格（税抜価格）と税込価格を併記しております。レジでお支払いいただく金額は税込価格となります。※広告の商品は豊富に取揃えましたが、万一売切れの際はご容赦ください。※一部商品の写真はイメージです。
+              </div>
+              <div class="coop-web-link">
+                コープさっぽろ公式: https://www.sapporo.coop
+              </div>
+            </div>
+          </footer>
+
+        </article>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Modal: Web Image Search & Preset Selection -->
+  <div class="modal-overlay" id="image-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-title-text">
+          <span>🔍 WEBから画像検索 &amp; 高画質食材ライブラリ</span>
+        </h3>
+        <button class="modal-close-btn" id="modal-close-btn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        
+        <!-- Search Bar -->
+        <div class="search-input-group">
+          <input type="text" id="modal-search-input" class="form-input" placeholder="商品名や食材名を入力（例: 玉ねぎ, シャウエッセン, 紅鮭, まぐろ, 牛肉, ぶどう, お米）">
+          <button id="btn-modal-do-search" class="btn btn-primary" style="padding:0 14px;">
+            検索
+          </button>
+        </div>
+
+        <!-- External Search Helper Links (Google / Yahoo / Open Food Facts) -->
+        <div class="external-search-links">
+          <span>💡 外部WEBから探す場合:</span>
+          <a id="link-google-images" href="#" target="_blank" rel="noopener noreferrer">
+            🔍 Google画像検索を開く
+          </a>
+          <span>|</span>
+          <a id="link-yahoo-images" href="#" target="_blank" rel="noopener noreferrer">
+            🔍 Yahoo!画像検索を開く
+          </a>
+          <span style="margin-left:auto; font-size:10px; color:#cbd5e1;">
+            ※開いた画像で「画像アドレスをコピー」後、貼付ボタンで適用可能
+          </span>
+        </div>
+
+        <!-- Mode Selectors -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+          <div style="font-size:12px; color:var(--text-sub);" id="modal-status-text">
+            写真をクリックすると選択中のコマに即座に反映されます。
+          </div>
+          <div style="display:flex; gap:5px; flex-wrap:wrap;">
+            <button id="btn-tab-modal-smart" class="btn btn-primary" style="padding:3px 7px; font-size:11px;">
+              ⭐ 商品名スマート一致
+            </button>
+            <button id="btn-tab-modal-web" class="btn btn-secondary" style="padding:3px 7px; font-size:11px;">
+              🌐 WEBリアルタイム検索
+            </button>
+            <button id="btn-tab-modal-presets" class="btn btn-secondary" style="padding:3px 7px; font-size:11px;">
+              🖼 コープ定番ライブラリ
+            </button>
+          </div>
+        </div>
+
+        <!-- Result Grid -->
+        <div class="image-result-grid" id="modal-image-grid">
+          <!-- Dynamically populated images -->
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
